@@ -300,7 +300,6 @@ let dragging = false;
 let aim = { x: 0.22, y: -0.975 };
 let pointer = { x: LAUNCH.x + 90, y: LAUNCH.y - 320, visible: false };
 let combo = 0;
-let shake = 0;
 let screenFlash = 0;
 let pendingLoot = 0;
 let learnedSkills = { power: 0, volley: 0, crit: 0, split: 0, pierce: 0, heal: 0 };
@@ -729,7 +728,6 @@ function startVolley() {
     launchQueue.push({ at: now + (stats.volley + index) * .12, character: index % 3, damageScale: .5 });
   }
   beep(240, 0.08, "sawtooth", 0.025);
-  navigator.vibrate?.(18);
 }
 
 function spawnProjectile(character, damageScale = 1) {
@@ -831,7 +829,6 @@ function update(dt, nowSeconds) {
   updateParticles(dt);
   updateFloaters(dt);
   updateShockwaves(dt);
-  shake = Math.max(0, shake - dt * 28);
   screenFlash = Math.max(0, screenFlash - dt * 2.8);
 
   if (mode === "firing" && blocks.length === 0) {
@@ -868,7 +865,6 @@ function handleFunElements(p) {
     floaters.push({ x: courier.x, y: courier.y - 18, text: "风邮明信片 +5", color: COLORS.gold, life: 1.2 });
     showToast("截获风邮明信片：罗盘 +5");
     screenFlash = Math.max(screenFlash, .18);
-    navigator.vibrate?.([20, 20, 45]);
     beep(880, .14, "triangle", .045);
   }
 
@@ -950,11 +946,9 @@ function hitBlock(block, p) {
   floaters.push({ x: p.x, y: p.y, text: critical ? `暴击 -${damageText}` : `-${damageText}`, color: critical ? COLORS.gold : COLORS.paper, life: 0.7 });
   createBurst(p.x, p.y, p.character === 0 ? COLORS.cobalt : p.character === 1 ? COLORS.coral : COLORS.mint, critical ? 13 : 8);
   addShockwave(p.x, p.y, critical ? COLORS.gold : COLORS.paper, critical ? 12 : 5, critical ? 76 : 34, critical ? .38 : .2);
-  shake = Math.min(8, shake + (critical ? 4 : 1.4));
   screenFlash = Math.max(screenFlash, critical ? .22 : .045);
   showCombo();
   beep(260 + Math.min(combo, 12) * 24, critical ? 0.08 : 0.04, critical ? "sawtooth" : "square", critical ? 0.04 : 0.023);
-  if (critical) navigator.vibrate?.(24);
 
   if (block.hp <= 0) destroyBlock(block, p);
 }
@@ -985,7 +979,6 @@ function destroyBlock(block, projectile) {
   createBurst(block.x + block.w / 2, block.y + block.h / 2, COLORS.gold, 28);
   addShockwave(block.x + block.w / 2, block.y + block.h / 2, COLORS.gold, 10, 84, .42);
   addShockwave(block.x + block.w / 2, block.y + block.h / 2, COLORS.paper, 18, 46, .2);
-  shake = Math.min(10, shake + 4);
   screenFlash = Math.max(screenFlash, .12);
   floaters.push({ x: block.x + block.w / 2, y: block.y + 8, text: `罗盘 +${gain}`, color: COLORS.gold, life: 0.9 });
   if (block.kind === "loot") {
@@ -1075,7 +1068,6 @@ function finishVolleyResolution() {
       blocks = blocks.filter(block => !danger.includes(block));
       updateHud();
       showToast("路障越线，体力 -1");
-      navigator.vibrate?.([35, 35, 35]);
       if (lives <= 0) {
         finish(false);
         return;
@@ -1119,7 +1111,6 @@ function learnSkill(skill) {
   ui.skill.classList.remove("open");
   showToast(skill.noLevel ? `${skill.title}：${skill.short}` : `${skill.title} LV.${learnedSkills[skill.id]}：${skill.short}`);
   beep(860, .15, "square", .045);
-  navigator.vibrate?.([20, 25, 45]);
   if (pendingLoot > 0) window.setTimeout(openSkillLearn, 220);
   else window.setTimeout(finishVolleyResolution, 220);
 }
@@ -1130,7 +1121,6 @@ function levelCleared() {
   launchQueue = [];
   compass += level * 3;
   updateHud();
-  navigator.vibrate?.([30, 30, 55]);
   beep(440, 0.12, "square", 0.035);
   window.setTimeout(() => beep(660, 0.16, "square", 0.035), 110);
 
@@ -1307,9 +1297,7 @@ function draw() {
     return;
   }
   ctx.save();
-  const sx = shake ? (rng() - .5) * shake : 0;
-  const sy = shake ? (rng() - .5) * shake : 0;
-  ctx.translate(sx, sy);
+  // Keep the camera fixed; impacts use local particles and damage numbers.
 
   drawCityBackground();
 
